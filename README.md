@@ -6,5 +6,5 @@ npm install -g json-server
 
 2)then run
 
-json-server --watch data.json
+json-server --watch db.json
 
