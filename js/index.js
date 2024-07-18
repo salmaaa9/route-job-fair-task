@@ -1,8 +1,35 @@
-import { customers, transactions } from './data.js';
+
 var tableContent = $('#table');
 var searchInput = $('#search');
 var graphInput = $('#graph');
 let myChart;
+var customers
+
+
+try{
+    var res = await fetch(`http://localhost:3000/customers`);
+   if(!res.ok){
+    throw new Error('failed to getCustomers' + res.status)
+   }
+   var customers = await res.json()
+}
+catch (err){
+    console.log(err);
+}
+
+try{
+    var res = await fetch(`http://localhost:3000/transactions`);
+   if(!res.ok){
+    throw new Error('failed to gettransactions' + res.status)
+   }
+   var transactions = await res.json()
+}
+catch (err){
+    console.log(err);
+}
+
+
+
 
 
 const customersNo = document.getElementById('customersNo');
