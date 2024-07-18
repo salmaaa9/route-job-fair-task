@@ -1,179 +1,132 @@
-const baseUrl = 'https://todos.routemisr.com';
-var form = document.getElementById('form');
-var todoInput = document.getElementById('toDo');
-var checkbox = document.getElementById('');
-var apikey = null;
-var todos = [];
+import { customers, transactions } from './data.js';
+var tableContent = $('#table');
+var searchInput = $('#search');
+var graphInput = $('#graph');
+let myChart;
 
 
+const customersNo = document.getElementById('customersNo');
+customersNo.textContent = 'Enter an id of customers from 1 to ' + customers.length;
 
-form.addEventListener('submit',function(e){
-    e.preventDefault();
-    var todo = todoInput.value;
-    addToDo(todo);
-    todoInput.value = '';
-})
-
-if(localStorage.getItem('apikey')){
-    apikey = localStorage.getItem('apikey');
-    getToDo(apikey)
-    // displayTodos(todos);
-}else{
-    getApiKey()
-}
-
-async function getApiKey(){
-   try{
-    var res = await fetch(`${baseUrl}/api/v1/getApiKey`);
-   if(!res.ok){
-    throw new Error('failed to get apikey' + res.status)
-   }
-   var data = await res.json()
-   if(data.message == 'success'){
-    console.log(data)
-    localStorage.setItem('apikey', data.apiKey)
-   }else{
-    throw new Error(JSON.stringify(data))
-   }
-   }
-   catch (err){
-    console.log(err);
-   }
-}
+$( "tbody" ).on( "click", "tr", function() {
+    var customerId = $(this)[0].id;
+    console.log(customerId);
+    customerId++;
+    displayGraph(customerId)
+});
+graphInput.on('keyup',function(){
+    var id = graphInput.val();
+    console.log(id);
+    displayGraph(id)
+});
 
 
-async function getToDo(key){
-   try{
-    var res = await fetch(`${baseUrl}/api/v1/todos/${key}`);
-   if(!res.ok){
-    throw new Error('failed to get ToDo' + res.status)
-   }
-   var data = await res.json() 
-   if(data.message == 'success'){
-
-//   display todos
-    todos = data.todos;
-    displayTodos(todos);
-    localStorage.setItem("todo" ,todos);
-    console.log(todos);
-
-   }else{
-    throw new Error(JSON.stringify(data))
-   }
-   }
-   catch (err){
-    console.log(err);
-   }
-}
-
-async function addToDo(title){
-    try{
-     var res = await fetch(`${baseUrl}/api/v1/todos` ,{
-         method: 'POST',
-         body: JSON.stringify({
- 
-                 "apiKey": apikey,
-                 "title": title
-             }),
-         headers: {
-             'Content-Type': 'application/json',
-         }
- 
-     })
-    if(!res.ok){
-     throw new Error('failed to addToDo' + res.status)
-    }
-    var data = await res.json() 
-    if(data.message == 'success'){
- 
- //   display todos
-     getToDo(apikey)
- // save to dos to local storage
-    }else{
-     throw new Error(JSON.stringify(data))
-    }
-    console.log(data)
-    }
-    catch (err){
-     console.log(err);
-    }
-}
-
-async function deleteToDo(id){
-    try{
-     var res = await fetch(`${baseUrl}/api/v1/todos` ,{
-         method: 'DELETE',
-         body: JSON.stringify({
-                 "todoId" : id ,
-             }),
-         headers: {
-             'Content-Type': 'application/json',
-         } 
-     })
-    if(!res.ok){
-     throw new Error('failed to deleteToDo' + res.status)
-    }
-    var data = await res.json() 
-    if(data.message == 'success'){
- 
-    //display todos
-    getToDo(apikey)
-    }else{
-     throw new Error(JSON.stringify(data))
-    }
-    console.log(data)
-    }
-    catch (err){
-     console.log(err);
-    }
-}
-
-async function markCompleted(id){
-    try{
-     var res = await fetch(`${baseUrl}/api/v1/todos` ,{
-         method: 'PUT',
-         body: JSON.stringify({
-                 "todoId" : id ,
-             }),
-         headers: {
-             'Content-Type': 'application/json',
-         } 
-     })
-    if(!res.ok){
-     throw new Error('failed to markCompleted' + res.status)
-    }
-    var data = await res.json() 
-    if(data.message == 'success'){
-    // mark checkbox
-        //display todos
-    // getToDo(apikey)
-    getToDo(apikey)
-    }else{
-     throw new Error(JSON.stringify(data))
-    }
-    }
-    catch (err){
-     console.log(err);
-    }
-}
-
-
-function displayTodos(data){
+function fetchAndDisplayData() {
     var string = '';
-    for(var i = 0; i < data.length; i++){
-        string += `
-        <tr>
-                <td>${data[i].title}</td>
-                <td><input ${data[i].completed && 'checked disabled'} type="checkbox" name ="${'todo-'+ i}" id ="${i}"  ></td>
-                <td><i onclick = "deleteToDo('${data[i]._id}')" class="fas fa-trash-can text-danger pointer"></i></td>
-        </tr>
-        `
-        console.log(data[i])
-    }
-    document.getElementById('data').innerHTML = string;
-
-    $('#data input').change(function(){
-        var id = $(this).attr('id');
-        markCompleted(data[id]._id)
-    })
+  // Simulate API call by using local data
+  for(let i = 0;i < transactions.length; i++)
+  {
+    var customerId = transactions[i].customer_id -1;
+    var customerName = customers[customerId].name;
+     string += `
+     <tr id = "${customerId}">
+     <td>${transactions[i].id}</td>
+     <td>${customerName}</td>
+     <td>${transactions[i].date}</td>
+     <td>${transactions[i].amount}</td>
+     </tr>
+    `
+  }
+  tableContent.html(string); 
 }
+
+function displayGraph(id){
+    console.log(id);
+    if (myChart) {
+        myChart.destroy(); // Destroy the previous chart instance
+      }
+    // Filter transactions for the selected customer
+    const selectedCustomerTransactions = transactions.filter(transaction => transaction.customer_id == id);
+    
+    // Group transactions by date and calculate total amount per day
+    const transactionsByDay = selectedCustomerTransactions.reduce((acc, transaction) => {
+      const date = transaction.date.slice(0, 10); // Extract date only
+      acc[date] = (acc[date] || 0) + transaction.amount;
+      return acc;
+    }, {});
+    
+    // Create chart data
+    const labels = Object.keys(transactionsByDay);
+    const data = Object.values(transactionsByDay);
+    
+    // Use Chart.js to create the chart
+    const ctx = document.getElementById('transactionChart').getContext('2d');
+    myChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: `Total Transaction Amount of ${customers[id-1].name}`,
+          data: data,
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'x',
+        scales: {
+        //   y: {
+        //     beginAtZero: true
+        //   },
+          x: {
+            stacked: true,
+            barPercentage: 1, // Set to 1 to fill the category width
+            categoryPercentage: 0.25 // Set to 25% of the category width
+          }
+        }
+      }
+    });
+}
+
+searchInput.on('keyup',function(){
+    var searchValue = $(this).val();
+    console.log(searchValue);
+    if(searchValue == ''){
+        fetchAndDisplayData();
+    }else{
+        var string = '';
+        for(let i = 0; i < transactions.length; i++)
+            {
+                var customerId = transactions[i].customer_id -1;
+                var customerName = customers[customerId].name;
+                if(customerName.toLowerCase().includes(searchValue.toLowerCase()))
+                    {
+                        string += `
+                        <tr>
+                        <td>${transactions[i].id}</td>
+                        <td>${customerName}</td>
+                        <td>${transactions[i].date}</td>
+                        <td>${transactions[i].amount}</td>
+                        </tr>
+                        `
+                }
+                if(transactions[i].amount.toString().includes(searchValue))
+                    {
+                        string += `
+                        <tr>
+                        <td>${transactions[i].id}</td>
+                        <td>${customerName}</td>
+                        <td>${transactions[i].date}</td>
+                        <td>${transactions[i].amount}</td>
+                        </tr>
+                        `
+                }
+            }
+        tableContent.html(string);
+    }
+  
+});
+
+fetchAndDisplayData();
+displayGraph(1)
